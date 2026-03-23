@@ -11,6 +11,7 @@ test.describe('CEC BI Automated API Suite', () => {
     let client: BaseClient;
 
     test.beforeAll(async ({ browser, request }) => {
+        test.setTimeout(60000); // Dar 60s para el login y extracción
         const page = await browser.newPage();
         const admin = Actor.named('AdminRunner', page);
 

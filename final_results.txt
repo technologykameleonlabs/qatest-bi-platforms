@@ -1,0 +1,83 @@
+[dotenv@17.3.1] injecting env (5) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+Running 4 tests using 1 worker
+
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }
+
+[1A[2K[1/4] [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:39:9 › CEC BI Automated API Suite › Validar integridad del perfil de usuario (/Auth/me)
+[1A[2K  1) [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:39:9 › CEC BI Automated API Suite › Validar integridad del perfil de usuario (/Auth/me) 
+
+    [31m"beforeAll" hook timeout of 30000ms exceeded.[39m
+
+      11 |     let client: BaseClient;
+      12 |
+    > 13 |     test.beforeAll(async ({ browser, request }) => {
+         |          ^
+      14 |         const page = await browser.newPage();
+      15 |         const admin = Actor.named('AdminRunner', page);
+      16 |
+        at D:\kameleonlabs\CEC BI\tests\api\auth_smoke.spec.ts:13:10
+
+    Error: page.waitForTimeout: Test ended.
+
+      27 |             token = await admin.extractTokenFromStorage();
+      28 |             if (token) break;
+    > 29 |             await page.waitForTimeout(1000);
+         |                        ^
+      30 |         }
+      31 |
+      32 |         if (!token) throw new Error('No se pudo obtener el token dinámico para la suite de API.');
+        at D:\kameleonlabs\CEC BI\tests\api\auth_smoke.spec.ts:29:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\api-auth_smoke-CEC-BI-Auto-c6a8c--perfil-de-usuario-Auth-me--CEC-BI\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[2/4] [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:48:9 › CEC BI Automated API Suite › Validar acceso al módulo de PowerBI
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+
+[1A[2K[3/4] [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Final Hybrid Validation › Login -> Dynamic JWT Extraction -> Global API Interception
+[1A[2K[CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Final Hybrid Validation › Login -> Dynamic JWT Extraction -> Global API Interception
+🔴 [NETWORK ERROR] 404 en https://mojitoprostorage.blob.core.windows.net/companies-logos/%20-%20/-logo.png: <?xml version="1.0" encoding="utf-8"?><Error><Code>BlobNotFound</Code><Message>The specified blob do...
+
+[1A[2K🔴 [NETWORK ERROR] 404 en https://mojitoprostorage.blob.core.windows.net/companies-banner/%20-%20/-banner.png: <?xml version="1.0" encoding="utf-8"?><Error><Code>BlobNotFound</Code><Message>The specified blob do...
+
+[1A[2K🔴 [NETWORK ERROR] 404 en https://mojitoprostorage.blob.core.windows.net/companies-banner/%20-%20/-banner.webm
+
+[1A[2K🔴 [NETWORK ERROR] 404 en https://mojitoprostorage.blob.core.windows.net/companies-banner/%20-%20/-banner.mp4
+
+[1A[2KEsperando por JWT dinámico (polling 60s max para internet lento)...
+
+[1A[2K  2) [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Final Hybrid Validation › Login -> Dynamic JWT Extraction -> Global API Interception 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.waitForTimeout: Test timeout of 30000ms exceeded.
+
+      36 |             token = await admin.extractTokenFromStorage();
+      37 |             if (token) break;
+    > 38 |             await page.waitForTimeout(1000);
+         |                        ^
+      39 |         }
+      40 |
+      41 |         if (!token) {
+        at D:\kameleonlabs\CEC BI\tests\api\hybrid_auth.spec.ts:38:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\api-hybrid_auth-CEC-BI-Fin-f8fe9-n---Global-API-Interception-CEC-BI\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\api-hybrid_auth-CEC-BI-Fin-f8fe9-n---Global-API-Interception-CEC-BI\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  enable debug logging with { debug: true }
+
+[1A[2K[4/4] [CEC-BI] › CEC BI\tests\e2e\auth_flow.spec.ts:6:9 › CEC BI E2E Tests (POM + Screenplay) › El usuario debe poder iniciar sesión exitosamente
+[1A[2K  2 failed
+    [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:39:9 › CEC BI Automated API Suite › Validar integridad del perfil de usuario (/Auth/me) 
+    [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Final Hybrid Validation › Login -> Dynamic JWT Extraction -> Global API Interception 
+  1 did not run
+  1 passed (1.5m)
