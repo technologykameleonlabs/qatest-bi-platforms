@@ -1,0 +1,90 @@
+[dotenv@17.3.1] injecting env (5) from .env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+
+Running 3 tests using 3 workers
+
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+
+[1A[2K[dotenv@17.3.1] injecting env (0) from .env -- tip: 🤖 agentic secret storage: https://dotenvx.com/as2
+
+[1A[2K[1/3] [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Hybrid Tests (UI Login + API Validation) › Obtener token de la UI y validar API /me
+[1A[2K[2/3] [CEC-BI] › CEC BI\tests\e2e\auth_flow.spec.ts:6:9 › CEC BI E2E Tests (POM + Screenplay) › El usuario debe poder iniciar sesión exitosamente
+[1A[2K[3/3] [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:18:9 › CEC BI API Functional Smoke Tests › Verificar perfil del usuario (Me)
+[1A[2K  1) [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:18:9 › CEC BI API Functional Smoke Tests › Verificar perfil del usuario (Me) 
+
+    Error: Error obteniendo token para CEC: Bad Request
+
+       at common\auth.ts:44
+
+      42 |
+      43 |         if (!response.ok()) {
+    > 44 |             throw new Error(`Error obteniendo token para ${system}: ${response.statusText()}`);
+         |                   ^
+      45 |         }
+      46 |
+      47 |         const data = await response.json();
+        at Function.getToken (D:\kameleonlabs\common\auth.ts:44:19)
+        at D:\kameleonlabs\CEC BI\tests\api\auth_smoke.spec.ts:10:23
+
+
+[1A[2K  2) [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Hybrid Tests (UI Login + API Validation) › Obtener token de la UI y validar API /me 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+    Call log:
+    [2m  - navigating to "https://dev.bi.empresascec.com/", waiting until "load"[22m
+
+
+       at CEC BI\tests\e2e\pages\LoginPage.ts:18
+
+      16 |     async navigate() {
+      17 |         // Usamos la URL dev de CEC BI que redirige al SSO
+    > 18 |         await this.page.goto('https://dev.bi.empresascec.com/');
+         |                         ^
+      19 |     }
+      20 |
+      21 |     async login(username: string, pass: string) {
+        at LoginPage.navigate (D:\kameleonlabs\CEC BI\tests\e2e\pages\LoginPage.ts:18:25)
+        at LoginToCEC.performAs (D:\kameleonlabs\CEC BI\tests\e2e\screenplay\LoginTask.ts:13:25)
+        at Actor.attemptsTo (D:\kameleonlabs\common\screenplay\Screenplay.ts:22:28)
+        at D:\kameleonlabs\CEC BI\tests\api\hybrid_auth.spec.ts:11:21
+
+    attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\api-hybrid_auth-CEC-BI-Hyb-4d58a-n-de-la-UI-y-validar-API-me-CEC-BI\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K  3) [CEC-BI] › CEC BI\tests\e2e\auth_flow.spec.ts:6:9 › CEC BI E2E Tests (POM + Screenplay) › El usuario debe poder iniciar sesión exitosamente 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.goto: net::ERR_ABORTED; maybe frame was detached?
+    Call log:
+    [2m  - navigating to "https://dev.bi.empresascec.com/", waiting until "load"[22m
+
+
+       at CEC BI\tests\e2e\pages\LoginPage.ts:18
+
+      16 |     async navigate() {
+      17 |         // Usamos la URL dev de CEC BI que redirige al SSO
+    > 18 |         await this.page.goto('https://dev.bi.empresascec.com/');
+         |                         ^
+      19 |     }
+      20 |
+      21 |     async login(username: string, pass: string) {
+        at LoginPage.navigate (D:\kameleonlabs\CEC BI\tests\e2e\pages\LoginPage.ts:18:25)
+        at LoginToCEC.performAs (D:\kameleonlabs\CEC BI\tests\e2e\screenplay\LoginTask.ts:13:25)
+        at Actor.attemptsTo (D:\kameleonlabs\common\screenplay\Screenplay.ts:22:28)
+        at D:\kameleonlabs\CEC BI\tests\e2e\auth_flow.spec.ts:10:21
+
+    attachment #1: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results\e2e-auth_flow-CEC-BI-E2E-T-142c6-iniciar-sesión-exitosamente-CEC-BI\video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+[1A[2K  3 failed
+    [CEC-BI] › CEC BI\tests\api\auth_smoke.spec.ts:18:9 › CEC BI API Functional Smoke Tests › Verificar perfil del usuario (Me) 
+    [CEC-BI] › CEC BI\tests\api\hybrid_auth.spec.ts:7:9 › CEC BI Hybrid Tests (UI Login + API Validation) › Obtener token de la UI y validar API /me 
+    [CEC-BI] › CEC BI\tests\e2e\auth_flow.spec.ts:6:9 › CEC BI E2E Tests (POM + Screenplay) › El usuario debe poder iniciar sesión exitosamente 

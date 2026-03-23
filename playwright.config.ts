@@ -31,12 +31,18 @@ export default defineConfig({
     {
       name: 'CEC-BI',
       testDir: './CEC BI/tests',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        channel: 'chrome' // Usa el Chrome instalado en el sistema
+      },
     },
     {
       name: 'MOJITO-BI',
       testDir: './MOJITO BI/tests',
-      use: { ...devices['Desktop Chrome'] },
+      use: { 
+        ...devices['Desktop Chrome'],
+        channel: 'chrome' // Usa el Chrome instalado en el sistema
+      },
     },
   ],
 });

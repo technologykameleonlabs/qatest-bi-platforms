@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { Actor } from '../../../common/screenplay/Screenplay';
-import { LoginToCEC } from '../screenplay/LoginTask';
+import { LoginToCEC } from './screenplay/LoginTask';
 
 test.describe('CEC BI E2E Tests (POM + Screenplay)', () => {
     test('El usuario debe poder iniciar sesión exitosamente', async ({ page }) => {

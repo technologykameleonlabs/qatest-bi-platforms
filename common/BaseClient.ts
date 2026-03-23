@@ -12,17 +12,29 @@ export class BaseClient {
     ) {}
 
     async get(endpoint: string, params?: Record<string, string>) {
-        return await this.requestContext.get(`${this.baseUrl}${endpoint}`, {
+        const response = await this.requestContext.get(`${this.baseUrl}${endpoint}`, {
             headers: this.getHeaders(),
             params: params
         });
+        await this.validateResponse(response);
+        return response;
     }
 
     async post(endpoint: string, data: any) {
-        return await this.requestContext.post(`${this.baseUrl}${endpoint}`, {
+        const response = await this.requestContext.post(`${this.baseUrl}${endpoint}`, {
             headers: this.getHeaders(),
             data: data
         });
+        await this.validateResponse(response);
+        return response;
+    }
+
+    private async validateResponse(response: any) {
+        if (response.status() >= 400) {
+            const body = await response.text();
+            console.error(`❌ API Error ${response.status()} en ${response.url()}: ${body}`);
+            // Podríamos lanzar error o capturarlo para Allure
+        }
     }
 
     private getHeaders() {

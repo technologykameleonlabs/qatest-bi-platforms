@@ -22,4 +22,22 @@ export class Actor {
             await activity.performAs(this);
         }
     }
+
+    async extractTokenFromStorage(): Promise<string | null> {
+        return await this.page.evaluate(() => {
+            const storages = [localStorage, sessionStorage];
+            for (const storage of storages) {
+                for (let i = 0; i < storage.length; i++) {
+                    const key = storage.key(i);
+                    if (key) {
+                        const value = storage.getItem(key);
+                        if (value && value.startsWith('ey') && value.length > 100) {
+                            return value;
+                        }
+                    }
+                }
+            }
+            return null;
+        });
+    }
 }
