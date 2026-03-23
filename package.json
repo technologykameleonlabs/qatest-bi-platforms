@@ -7,7 +7,12 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npx playwright test",
+    "test:cec": "npx playwright test --project=CEC-BI",
+    "test:mojito": "npx playwright test --project=MOJITO-BI",
+    "report": "npx allure serve allure-results",
+    "allure:generate": "npx allure generate allure-results --clean",
+    "allure:open": "npx allure open allure-report"
   },
   "keywords": [],
   "author": "",
@@ -19,5 +24,8 @@
     "allure-playwright": "^3.6.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   }
 }
