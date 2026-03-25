@@ -1,4 +1,4 @@
-import { Actor, Task } from '../../../common/screenplay/Screenplay';
+import { Actor, Task } from '../../../../common/screenplay/Screenplay';
 import { ReportingPage } from '../pages/ReportingPage';
 
 export class FilterReport implements Task {

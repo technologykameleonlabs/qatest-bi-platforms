@@ -4,5 +4,9 @@ playwright-report/
 allure-results/
 allure-report/
 .env
+variables.env
+*.png
+debug_env.js
+test_minimal.spec.ts
 .DS_Store
 *.log

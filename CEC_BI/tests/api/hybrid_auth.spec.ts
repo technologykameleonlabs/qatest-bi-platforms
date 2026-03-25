@@ -35,14 +35,21 @@ test.describe('CEC BI Final Hybrid Validation', () => {
         for (let i = 0; i < 60; i++) {
             token = await admin.extractTokenFromStorage();
             if (token) break;
+            
+            if (i === 30) {
+                console.log('⚠️ Media vuelta del polling alcanzada (30s). Tomando captura de estado...');
+                await page.screenshot({ path: 'debug_polling_30s.png' });
+            }
+            
             await page.waitForTimeout(1000);
         }
 
         if (!token) {
             // Debug: Volcar storage si falla
             const storage = await page.evaluate(() => JSON.stringify(localStorage));
-            console.error(`❌ FALLÓ EXTRACCIÓN. Storage actual: ${storage.substring(0, 200)}...`);
-            await page.screenshot({ path: 'debug_no_token.png', fullPage: true });
+            console.error(`❌ FALLÓ EXTRACCIÓN en URL: ${page.url()}`);
+            console.error(`Storage actual (primeros 200 chars): ${storage.substring(0, 200)}...`);
+            await page.screenshot({ path: 'debug_no_token_final.png', fullPage: true });
             throw new Error('No se detectó el JWT tras la redirección del Dashboard.');
         }
 
