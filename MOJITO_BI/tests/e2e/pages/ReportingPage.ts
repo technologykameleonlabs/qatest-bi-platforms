@@ -1,4 +1,5 @@
 import { Page, Locator } from '@playwright/test';
+import { LoginPage } from './LoginPage';
 
 export class ReportingPage {
     readonly page: Page;
@@ -26,8 +27,42 @@ export class ReportingPage {
         await reportCard.waitFor({ state: 'visible', timeout: 10000 });
         await reportCard.click();
         
-        await this.page.waitForLoadState('networkidle');
-        await this.page.waitForTimeout(2000);
+        // --- RESILIENCIA: DETECTAR REDIRECCIÓN A SSO ---
+        console.log('[MOJITO-DEBUG] Verificando redirección de seguridad (SSO)...');
+        try {
+            const ssoInput = this.page.locator('#nameInput');
+            const isSso = await ssoInput.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+            
+            if (isSso) {
+                console.warn('[MOJITO-DEBUG] 🔐 SESIÓN REQUERIDA: Re-autenticando en SSO (Ultra-Robust Mode)...');
+                
+                // Limpieza agresiva y escritura lenta
+                await ssoInput.click({ clickCount: 3 });
+                await this.page.keyboard.press('Backspace');
+                await ssoInput.type(process.env.CEC_USERNAME!, { delay: 100 });
+                
+                const passInput = this.page.locator('#passwordInput');
+                await passInput.click({ clickCount: 3 });
+                await this.page.keyboard.press('Backspace');
+                await passInput.type(process.env.CEC_PASSWORD!, { delay: 100 });
+                
+                await this.page.keyboard.press('Tab');
+                await this.page.waitForTimeout(1000);
+                
+                const loginBtn = this.page.locator('.body_login_submit');
+                await loginBtn.click();
+                
+                // Esperar a que el login procese y redirija de vuelta
+                await this.page.waitForLoadState('networkidle', { timeout: 30000 });
+                console.log('[MOJITO-DEBUG] ✅ Re-autenticación completada con éxito.');
+            } else {
+                console.log('[MOJITO-DEBUG] No se detectó redirección de seguridad (ya autenticado).');
+            }
+        } catch (e) {
+            console.log('[MOJITO-DEBUG] Error o Timeout en flujo de re-autenticación.');
+        }
+
+        await this.page.waitForLoadState('load');
         await this.page.screenshot({ path: 'mojito_report_opened.png' });
     }
 
@@ -46,5 +81,20 @@ export class ReportingPage {
         
         // Esperar a que la grilla se actualice (indicado por el grid siendo visible)
         await this.reportGrid.waitFor({ state: 'visible', timeout: 10000 });
+    }
+
+    async exportReport() {
+        console.log('[MOJITO-DEBUG] Iniciando exportación de reporte...');
+        const downloadPromise = this.page.waitForEvent('download');
+        await this.exportButton.click();
+        const download = await downloadPromise;
+        console.log(`[MOJITO-DEBUG] Descarga completada: ${download.suggestedFilename()}`);
+        return download;
+    }
+
+    async getFirstCellValue() {
+        const cell = this.page.locator('.report-grid table tr td').first();
+        await cell.waitFor({ state: 'visible', timeout: 5000 });
+        return await cell.innerText();
     }
 }

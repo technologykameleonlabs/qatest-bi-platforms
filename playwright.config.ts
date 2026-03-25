@@ -21,9 +21,20 @@ try {
     console.error('Error loading variables.env manually:', e);
 }
 
-// Remove environment variables that cause SyntaxError in regex-based secret masking
-delete process.env.JAVA_HOME;
-delete process.env.NO_PROXY;
+// --- SANITIZACIÓN DINÁMICA DE ENTORNO ---
+// Elimina variables que rompen Playwright con SyntaxError: Invalid regular expression
+for (const key in process.env) {
+    const val = process.env[key];
+    if (val && typeof val === 'string') {
+        try {
+            new RegExp(val, 'gi');
+        } catch (e) {
+            console.warn(`[CONFIG] Eliminando variable de entorno conflictiva: ${key}`);
+            delete process.env[key];
+        }
+    }
+}
+// ---------------------------------------
 
 export default defineConfig({
     testDir: './',
@@ -38,7 +49,7 @@ export default defineConfig({
     reporter: [
         ['list'],
         ['html'],
-        ['allure-playwright', { outputFolder: 'allure-results' }]
+        // ['allure-playwright', { outputFolder: 'allure-results' }]
     ],
     use: {
         actionTimeout: 0,

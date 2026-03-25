@@ -9,6 +9,9 @@ export class LoginToMojito implements Task {
     }
 
     async performAs(actor: Actor): Promise<void> {
+        // Activar el Red Interceptor para captura instantánea de JWT
+        await actor.startTokenInterception();
+
         const loginPage = new LoginPage(actor.page);
         await loginPage.navigate();
         await loginPage.login(this.user, this.pass);

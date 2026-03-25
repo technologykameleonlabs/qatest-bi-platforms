@@ -30,8 +30,9 @@ export class LoginPage {
 
     async selectEntity(entityName: string = 'Global') {
         console.log(`[MOJITO-DEBUG] Seleccionando entidad: ${entityName}`);
-        await this.page.screenshot({ path: 'mojito_login_success.png' });
+        // await this.page.screenshot({ path: 'mojito_login_success.png' }); // Deshabilitado por timeout
         
+        await this.page.waitForTimeout(2000); // Dar tiempo a que cargue la lista
         const entityLocator = this.page.locator('div').filter({ hasText: new RegExp(`^${entityName}$`, 'i') }).first();
         if (!(await entityLocator.isVisible())) {
             // Reintento con selector más laxo si el estricto falla

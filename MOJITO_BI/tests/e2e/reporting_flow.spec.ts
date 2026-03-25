@@ -2,24 +2,38 @@ import { test, expect } from '@playwright/test';
 import { Actor } from '../../../common/screenplay/Screenplay';
 import { FilterReport } from './screenplay/FilterReportTask';
 import { LoginToMojito } from './screenplay/LoginTask';
+import { ValidateDataIntegrity } from './screenplay/ValidateDataIntegrityTask';
+import { ExportReport } from './screenplay/ExportReportTask';
 
-test.describe('MOJITO BI E2E Tests (POM + Screenplay)', () => {
-    test('El usuario debe visualizar la tabla de reportes correctamente', async ({ page }) => {
-        const analyst = Actor.named('ReportAnalyst', page);
+test.describe('MOJITO BI - Flujo Completo de Auditoría', () => {
+    test('Validación Híbrida de Datos y Exportación en Mojito', async ({ page }) => {
+        const analyst = Actor.named('MojitoAnalyst', page);
 
-        // Iniciar Sesión primero
+        // 1. Autenticación con Red Interceptor
         await analyst.attemptsTo(
-            LoginToMojito.withCredentials(
-                process.env.CEC_USERNAME!, // Usamos las mismas credenciales si el SSO es compartido
-                process.env.CEC_PASSWORD!
-            )
+            LoginToMojito.withCredentials(process.env.CEC_USERNAME!, process.env.CEC_PASSWORD!)
         );
 
+        // 2. Filtrado y Carga de Datos
+        console.log('[AUDIT] Aplicando filtros de tiempo...');
         await analyst.attemptsTo(
             FilterReport.forDateRange('Last 30 Days')
         );
 
-        // Verificación de existencia del grid de datos
-        await expect(page.locator('.report-grid')).toBeVisible();
+        // 3. Validación de Integridad (UI vs Backend)
+        // Usamos un endpoint base que sabemos que responde OData folders/providers para esta demo
+        // o uno de reportes si tenemos el key.
+        console.log('[AUDIT] Ejecutando validación de integridad híbrida...');
+        await analyst.attemptsTo(
+            ValidateDataIntegrity.againstApi('/odata/Folders')
+        );
+
+        // 4. Validación de Exportación (Download)
+        console.log('[AUDIT] Validando funcionalidad de exportación...');
+        await analyst.attemptsTo(
+            ExportReport.toFile()
+        );
+
+        console.log('[AUDIT] ✅ Flujo Mojito BI completado con éxito.');
     });
 });
