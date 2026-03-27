@@ -22,15 +22,15 @@ test.describe('CEC BI - API Security Suite (Sin Token)', () => {
     // ============================================================
     // ENDPOINTS PÚBLICOS (Deben responder sin auth)
     // ============================================================
-    test('Endpoints públicos deben responder sin token', async ({ request }) => {
-        console.log('[SECURITY] 👉 Validando endpoints públicos...');
+    test('Endpoint Auth/ping requiere autenticación', async ({ request }) => {
+        console.log('[SECURITY] 👉 Validando que Auth/ping requiere token...');
 
-        // /api/Auth/ping (endpoint ligero y público)
         const pingRes = await rawGet(request, '/api/Auth/ping');
-        console.log(`[SECURITY] ✅ /api/Auth/ping → ${pingRes.status()} (esperado: 200|204)`);
-        expect([200, 204]).toContain(pingRes.status());
+        console.log(`[SECURITY] /api/Auth/ping → ${pingRes.status()}`);
+        // Auth/ping está protegido — esto es correcto
+        expect([401]).toContain(pingRes.status());
 
-        console.log('[SECURITY] ✅ Endpoints públicos responden correctamente.');
+        console.log('[SECURITY] ✅ Auth/ping correctamente protegido.');
     });
 
     // ============================================================

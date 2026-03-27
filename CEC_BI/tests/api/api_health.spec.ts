@@ -1,26 +1,32 @@
 import { test, expect } from '@playwright/test';
-import { Actor } from '../../../common/screenplay/Screenplay';
-import { LoginToCEC } from '../e2e/screenplay/LoginTask';
 import { BaseClient } from '../../../common/BaseClient';
+import { AuthProvider } from '../../../common/AuthProvider';
 
 test.describe('CEC BI - API Global Health Suite (6 Fases)', () => {
-    let actor: Actor;
-    let token: string;
     let client: BaseClient;
+    let jwt: string;
+
+    test.beforeAll(async ({ request }) => {
+        console.log('[AUDIT] Obteniendo JWT directamente via API...');
+        
+        const token = await AuthProvider.getToken(
+            'https://sso.pre.mojito360.com',
+            process.env.CEC_CLIENT_ID!,
+            process.env.CEC_USERNAME!,
+            process.env.CEC_PASSWORD!
+        );
+
+        if (!token) {
+            throw new Error('❌ Fallo crítico: No se pudo obtener el JWT del SSO.');
+        }
+
+        jwt = token;
+        // Inicializar cliente con el token capturado
+        client = new BaseClient(request, jwt, process.env.CEC_BASE_URL!);
+        console.log('[AUDIT] ✅ Cliente API Inicializado con éxito.');
+    });
 
     test('Ejecutar Auditoría Completa de Endpoints (Fases 1-6)', async ({ page }) => {
-        actor = Actor.named('CorporateAuditor', page);
-        
-        // --- PRE-REQUISITO: LOGIN ---
-        console.log('[AUDIT] Iniciando Login para captura de JWT...');
-        await actor.attemptsTo(
-            LoginToCEC.withCredentials(process.env.CEC_USERNAME!, process.env.CEC_PASSWORD!)
-        );
-        
-        token = await actor.waitForToken();
-        client = new BaseClient(actor.page.request, token, process.env.CEC_BASE_URL!, '1');
-        console.log('[AUDIT] ✅ JWT Capturado y Cliente API Inicializado.');
-
         // ============================================================
         // FASE 1: AUTH & HEALTH
         // ============================================================

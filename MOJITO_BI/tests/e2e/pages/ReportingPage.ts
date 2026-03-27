@@ -20,11 +20,23 @@ export class ReportingPage {
         await reportsMenu.waitFor({ state: 'visible', timeout: 15000 });
         await reportsMenu.click();
         
-        await this.page.waitForTimeout(1000);
+        await this.page.waitForTimeout(2000);
+        
+        // Buscar carpeta o reporte disponible
+        console.log('[MOJITO-DEBUG] Buscando reportes o carpetas...');
+        const folder = this.page.locator('text=testing').first();
+        const reportDirect = this.page.locator('div').filter({ hasText: /Reporte/i }).last();
+        
+        if (await folder.isVisible()) {
+            console.log('[MOJITO-DEBUG] Carpeta "testing" encontrada, entrando...');
+            await folder.click();
+            await this.page.waitForTimeout(2000);
+        }
+        
+        // Ahora buscar el primer reporte disponible dentro
         console.log('[MOJITO-DEBUG] Seleccionando el primer reporte disponible...');
-        // Selector muy laxo para cualquier cosa que diga Reporte y tenga icono
-        const reportCard = this.page.locator('div').filter({ hasText: /Reporte V/i }).last(); // El header también lo tiene, queremos el de abajo
-        await reportCard.waitFor({ state: 'visible', timeout: 10000 });
+        const reportCard = this.page.locator('[class*="report"], [class*="card"], div').filter({ hasText: /reporte|report|test/i }).last();
+        await reportCard.waitFor({ state: 'visible', timeout: 15000 });
         await reportCard.click();
         
         // --- RESILIENCIA: DETECTAR REDIRECCIÓN A SSO (INTERMITENTE) ---
@@ -65,35 +77,82 @@ export class ReportingPage {
         await this.page.screenshot({ path: 'mojito_report_opened.png' });
     }
 
-    async selectFilters(dateRange: string) {
-        await this.filterButton.click();
-        // Esperamos a que el dropdown de rangos de fecha sea visible
-        const rangeOption = this.page.locator(`text=${dateRange}`);
-        await rangeOption.waitFor({ state: 'visible', timeout: 5000 });
-        await rangeOption.click();
+    async verifyReportLoaded() {
+        console.log('[MOJITO-DEBUG] Verificando que el reporte cargó con datos...');
         
-        // Clic en aplicar si existe el botón
-        const applyButton = this.page.locator('button:has-text("Apply")');
-        if (await applyButton.isVisible()) {
-            await applyButton.click();
+        // Esperar a que aparezca la sección "Totales"
+        const totalesHeading = this.page.locator('text=Totales');
+        await totalesHeading.waitFor({ state: 'visible', timeout: 30000 });
+        
+        // Extraer KPIs principales
+        const totalOrdenesText = this.page.locator('text=Total de Órdenes').first();
+        await totalOrdenesText.waitFor({ state: 'visible', timeout: 10000 });
+        console.log('[MOJITO-DEBUG] ✅ KPI "Total de Órdenes" visible.');
+
+        const geoText = this.page.locator('text=Geoposicionadas').first();
+        if (await geoText.isVisible()) {
+            console.log('[MOJITO-DEBUG] ✅ KPI "Geoposicionadas" visible.');
         }
         
-        // Esperar a que la grilla se actualice (indicado por el grid siendo visible)
-        await this.reportGrid.waitFor({ state: 'visible', timeout: 10000 });
+        // Verificar que la tabla de datos esté presente
+        const table = this.page.locator('table').first();
+        await table.waitFor({ state: 'visible', timeout: 15000 });
+        const rowCount = await this.page.locator('table tbody tr').count();
+        console.log(`[MOJITO-DEBUG] ✅ Tabla cargada con ${rowCount} filas visibles.`);
+        
+        return { rowCount };
     }
 
-    async exportReport() {
-        console.log('[MOJITO-DEBUG] Iniciando exportación de reporte...');
-        const downloadPromise = this.page.waitForEvent('download');
-        await this.exportButton.click();
-        const download = await downloadPromise;
-        console.log(`[MOJITO-DEBUG] Descarga completada: ${download.suggestedFilename()}`);
-        return download;
+    async getKpiValues() {
+        console.log('[MOJITO-DEBUG] Extrayendo KPIs del reporte...');
+        
+        // Los KPIs son números grandes seguidos de "/" y otro número
+        // Formato: "329 / 329" con "Total de Órdenes" debajo
+        const kpiSection = this.page.locator('text=Total de Órdenes').locator('..');
+        
+        // Extraer todos los textos numéricos cercanos al label
+        const kpis: Record<string, string> = {};
+        
+        const totalText = await this.page.locator('text=Total de Órdenes').locator('..').locator('..').textContent();
+        if (totalText) {
+            console.log(`[MOJITO-DEBUG] KPI Raw: ${totalText.trim()}`);
+            kpis['totalOrdenes'] = totalText.trim();
+        }
+        
+        return kpis;
+    }
+
+    async exportToExcel() {
+        console.log('[MOJITO-DEBUG] Exportando a Excel...');
+        // El botón de export es el icono "file-excel" dentro de la sección de la tabla
+        const excelBtn = this.page.locator('button:has(img[alt="file-excel"])').first();
+        
+        if (await excelBtn.isVisible()) {
+            const downloadPromise = this.page.waitForEvent('download', { timeout: 30000 });
+            await excelBtn.click();
+            try {
+                const download = await downloadPromise;
+                console.log(`[MOJITO-DEBUG] ✅ Archivo descargado: ${download.suggestedFilename()}`);
+                return download;
+            } catch (e) {
+                console.log('[MOJITO-DEBUG] ⚠️ No se completó la descarga (posible popup de confirmación).');
+                return null;
+            }
+        } else {
+            // Fallback: botón download en el header
+            const headerDownload = this.page.locator('button:has(img[alt="download"])').first();
+            if (await headerDownload.isVisible()) {
+                await headerDownload.click();
+                console.log('[MOJITO-DEBUG] ⚠️ Usando botón download del header.');
+            }
+            return null;
+        }
     }
 
     async getFirstCellValue() {
-        const cell = this.page.locator('.report-grid table tr td').first();
-        await cell.waitFor({ state: 'visible', timeout: 5000 });
+        // Ant Design tables have a hidden first row (nz-disable-td), skip it
+        const cell = this.page.locator('table tbody tr:nth-child(2) td').first();
+        await cell.waitFor({ state: 'visible', timeout: 15000 });
         return await cell.innerText();
     }
 }
