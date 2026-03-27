@@ -27,39 +27,38 @@ export class ReportingPage {
         await reportCard.waitFor({ state: 'visible', timeout: 10000 });
         await reportCard.click();
         
-        // --- RESILIENCIA: DETECTAR REDIRECCIÓN A SSO ---
+        // --- RESILIENCIA: DETECTAR REDIRECCIÓN A SSO (INTERMITENTE) ---
         console.log('[MOJITO-DEBUG] Verificando redirección de seguridad (SSO)...');
         try {
             const ssoInput = this.page.locator('#nameInput');
             const isSso = await ssoInput.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
             
             if (isSso) {
-                console.warn('[MOJITO-DEBUG] 🔐 SESIÓN REQUERIDA: Re-autenticando en SSO (Ultra-Robust Mode)...');
+                // Usar credenciales específicas de re-login (diferente al login inicial)
+                const reloginUser = process.env.MOJITO_RELOGIN_USERNAME || process.env.CEC_USERNAME!;
+                const reloginPass = process.env.CEC_PASSWORD!;
+                console.warn(`[MOJITO-DEBUG] 🔐 Re-login SSO detectado. Usando: ${reloginUser.substring(0, 10)}...`);
                 
-                // Limpieza agresiva y escritura lenta
                 await ssoInput.click({ clickCount: 3 });
                 await this.page.keyboard.press('Backspace');
-                await ssoInput.type(process.env.CEC_USERNAME!, { delay: 100 });
+                await ssoInput.type(reloginUser, { delay: 50 });
                 
                 const passInput = this.page.locator('#passwordInput');
                 await passInput.click({ clickCount: 3 });
                 await this.page.keyboard.press('Backspace');
-                await passInput.type(process.env.CEC_PASSWORD!, { delay: 100 });
+                await passInput.type(reloginPass, { delay: 50 });
                 
-                await this.page.keyboard.press('Tab');
-                await this.page.waitForTimeout(1000);
-                
+                await this.page.waitForTimeout(500);
                 const loginBtn = this.page.locator('.body_login_submit');
                 await loginBtn.click();
                 
-                // Esperar a que el login procese y redirija de vuelta
                 await this.page.waitForLoadState('networkidle', { timeout: 30000 });
-                console.log('[MOJITO-DEBUG] ✅ Re-autenticación completada con éxito.');
+                console.log('[MOJITO-DEBUG] ✅ Re-autenticación completada.');
             } else {
-                console.log('[MOJITO-DEBUG] No se detectó redirección de seguridad (ya autenticado).');
+                console.log('[MOJITO-DEBUG] ✅ No hubo redirección (sesión activa).');
             }
         } catch (e) {
-            console.log('[MOJITO-DEBUG] Error o Timeout en flujo de re-autenticación.');
+            console.log('[MOJITO-DEBUG] ⚠️ Error en detección de re-login (continuando).');
         }
 
         await this.page.waitForLoadState('load');
