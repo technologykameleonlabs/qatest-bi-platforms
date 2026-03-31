@@ -15,7 +15,7 @@ export class LoginPage {
 
     async navigate() {
         // Usamos la URL dev de CEC BI que redirige al SSO
-        await this.page.goto('https://dev.bi.empresascec.com/', { waitUntil: 'load', timeout: 60000 });
+        await this.page.goto('https://dev.bi.empresascec.com/', { waitUntil: 'domcontentloaded', timeout: 60000 });
     }
 
     async login(username: string, pass: string) {

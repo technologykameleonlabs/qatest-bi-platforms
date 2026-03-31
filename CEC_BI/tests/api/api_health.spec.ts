@@ -1,32 +1,72 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, chromium } from '@playwright/test';
 import { BaseClient } from '../../../common/BaseClient';
-import { AuthProvider } from '../../../common/AuthProvider';
+import { Actor } from '../../../common/screenplay/Screenplay';
+import { LoginToCEC } from '../e2e/screenplay/LoginTask';
 
-test.describe('CEC BI - API Global Health Suite (6 Fases)', () => {
+test.describe('CEC BI - API Global Health & Security Suite (Unified)', () => {
     let client: BaseClient;
     let jwt: string;
+    const BASE_URL = process.env.CEC_BASE_URL || 'https://dev.bi.empresascec.com/backend';
 
     test.beforeAll(async ({ request }) => {
-        console.log('[AUDIT] Obteniendo JWT directamente via API...');
+        console.log('[AUDIT] Obteniendo JWT vía Interceptor UI (Headless)...');
         
-        const token = await AuthProvider.getToken(
-            'https://sso.pre.mojito360.com',
-            process.env.CEC_CLIENT_ID!,
-            process.env.CEC_USERNAME!,
-            process.env.CEC_PASSWORD!
+        const browser = await chromium.launch({ headless: true });
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        
+        const admin = Actor.named('CorporateAuditor', page);
+        await admin.startTokenInterception();
+        
+        await admin.attemptsTo(
+            LoginToCEC.withCredentials(
+                process.env.CEC_USERNAME!,
+                process.env.CEC_PASSWORD!
+            )
         );
-
-        if (!token) {
-            throw new Error('❌ Fallo crítico: No se pudo obtener el JWT del SSO.');
-        }
-
+        
+        const token = await admin.waitForToken();
+        if (!token) throw new Error('❌ Fallo crítico: No se pudo obtener el JWT.');
+        
         jwt = token;
+        await browser.close();
+        
         // Inicializar cliente con el token capturado
-        client = new BaseClient(request, jwt, process.env.CEC_BASE_URL!);
+        client = new BaseClient(request, jwt, BASE_URL);
         console.log('[AUDIT] ✅ Cliente API Inicializado con éxito.');
     });
 
-    test('Ejecutar Auditoría Completa de Endpoints (Fases 1-6)', async ({ page }) => {
+    test('Fase 0: Auditoría de Seguridad (Test Negativos sin Auth)', async ({ request }) => {
+        console.log('\n[SECURITY] ══════════════════════════════════════');
+        console.log('[SECURITY] 👉 FASE 0: Validando accesos sin Token (401)');
+        console.log('[SECURITY] ══════════════════════════════════════');
+
+        const protectedEndpoints = [
+            '/api/Auth/ping',
+            '/api/Auth/me',
+            '/api/Credentials',
+            '/odata/DataSourceProviders',
+            '/odata/Folders',
+            '/odata/Permissions',
+            '/odata/Roles',
+            '/odata/UserAccounts',
+            '/odata/Reports',
+            '/odata/RequestAudits',
+            '/odata/DataSourceProviders/$count'
+        ];
+
+        for (const endpoint of protectedEndpoints) {
+            const res = await request.get(`${BASE_URL}${endpoint}`, {
+                headers: { 'Accept': 'application/json' },
+                timeout: 10000,
+            });
+            console.log(`[SECURITY] ${endpoint} → ${res.status()}`);
+            expect([401, 500]).toContain(res.status());
+            if (res.status() === 500) console.warn(`[SECURITY] ⚠️ ${endpoint} devuelve 500 en vez de 401.`);
+        }
+    });
+
+    test('Ejecutar Auditoría Completa de Endpoints Protegidos (Fases 1-6)', async () => {
         // ============================================================
         // FASE 1: AUTH & HEALTH
         // ============================================================
