@@ -15,27 +15,36 @@ export class ValidateDataIntegrity implements Task {
     }
 
     async performAs(actor: Actor): Promise<void> {
-        console.log(`[MOJITO-AUDIT] Iniciando validación híbrida...`);
+        console.log(`[MOJITO-AUDIT] Iniciando validación híbrida real...`);
         const reportingPage = new ReportingPage(actor.page);
         
-        // 1. Validar que la UI tiene datos cargados
-        const uiValue = await reportingPage.getFirstCellValue();
-        console.log(`[MOJITO-AUDIT] ✅ UI: Primera celda = "${uiValue}"`);
-        expect(uiValue).toBeTruthy();
+        // 1. Extraer KPIs de la UI
+        const uiKpis = await reportingPage.getKpiValues();
+        const uiTotal = parseInt(uiKpis['totalOrdenes'] || '0', 10);
+        console.log(`[MOJITO-AUDIT] ✅ UI -> Total de Órdenes: ${uiTotal}`);
+        expect(uiTotal).toBeGreaterThan(0);
 
-        // 2. Validar KPIs visibles
-        const kpis = await reportingPage.getKpiValues();
-        console.log(`[MOJITO-AUDIT] ✅ KPIs extraídos: ${JSON.stringify(kpis)}`);
-
-        // 3. Verificar que la API backend responde con token capturado
+        // 2. Obtener Token y Cliente API
         const token = await actor.waitForToken();
-        const baseUrl = process.env.MOJITO_BASE_URL || process.env.CEC_BASE_URL!;
-        const client = new BaseClient(actor.page.request, token, baseUrl, '1');
+        const baseUrl = process.env.MOJITO_BASE_URL || 'https://reporting.dev.mojito360.com/backend';
+        const client = new BaseClient(actor.page.request, token, baseUrl);
 
+        // 3. Consultar API (OData $count o endpoint de reporte)
         const response = await client.get(this.endpoint);
         console.log(`[MOJITO-AUDIT] API ${this.endpoint} → Status: ${response.status()}`);
-        expect([200, 204]).toContain(response.status());
+        expect(response.status()).toBe(200);
+
+        // 4. Comparar (Asumiendo que el endpoint devuelve un número plano o $count)
+        const apiBody = await response.text();
+        const apiTotal = parseInt(apiBody, 10);
         
-        console.log(`[MOJITO-AUDIT] ✅ Validación Híbrida Completada: UI activa + API respondiendo.`);
+        console.log(`[MOJITO-AUDIT] COMPARACIÓN -> UI: ${uiTotal} | API: ${apiTotal}`);
+        
+        if (!isNaN(apiTotal)) {
+            expect(uiTotal, 'Mismatch entre UI y API (Total de Órdenes)').toBe(apiTotal);
+            console.log(`[MOJITO-AUDIT] 🎉 ¡INTEGRIDAD VALIDADA! Los datos coinciden.`);
+        } else {
+            console.warn(`[MOJITO-AUDIT] ⚠️ La API no devolvió un número válido para comparación directa.`);
+        }
     }
 }

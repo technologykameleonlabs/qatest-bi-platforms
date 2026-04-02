@@ -7,6 +7,7 @@ import { ExportReport } from './screenplay/ExportReportTask';
 
 test.describe('MOJITO BI E2E Hybrid Validation', () => {
     test('Validar integridad de datos (API vs UI) y exportación exitosa', async ({ page }) => {
+        test.setTimeout(120000); // Dar más tiempo para el flujo SSO completo
         const analyst = Actor.named('DataAnalyst', page);
 
         // 1. Login y Preparación
@@ -23,10 +24,9 @@ test.describe('MOJITO BI E2E Hybrid Validation', () => {
         );
 
         // 3. Validación de Integridad (Hybrid)
-        // Usamos un endpoint de ejemplo de Mojito que devuelva los datos del reporte actual
+        // Usamos el endpoint OData de Fulfillments que suele coincidir con "Total de Órdenes" en Mojito BI
         await analyst.attemptsTo(
-            ValidateDataIntegrity.againstApi('https://reporting.dev.mojito360.com/backend/api/InternalSupport/ping') 
-            // Usamos ping como placeholder si no tenemos el ID del reporte exacto aun
+            ValidateDataIntegrity.againstApi('/odata/Fulfillments/$count') 
         );
 
         // 4. Exportación

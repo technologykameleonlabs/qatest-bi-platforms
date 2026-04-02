@@ -17,8 +17,12 @@ export class ReportingPage {
     async navigate() {
         console.log('[MOJITO-DEBUG] Navegando a Gestión de Reportes...');
         const reportsMenu = this.page.locator('text=Gestión de Reportes');
-        await reportsMenu.waitFor({ state: 'visible', timeout: 15000 });
-        await reportsMenu.click();
+        try {
+            await reportsMenu.waitFor({ state: 'visible', timeout: 15000 });
+            await reportsMenu.click();
+        } catch (e) {
+            await this.page.goto('https://reporting.dev.mojito360.com/reports');
+        }
         
         await this.page.waitForTimeout(2000);
         
@@ -105,18 +109,31 @@ export class ReportingPage {
 
     async getKpiValues() {
         console.log('[MOJITO-DEBUG] Extrayendo KPIs del reporte...');
-        
-        // Los KPIs son números grandes seguidos de "/" y otro número
-        // Formato: "329 / 329" con "Total de Órdenes" debajo
-        const kpiSection = this.page.locator('text=Total de Órdenes').locator('..');
-        
-        // Extraer todos los textos numéricos cercanos al label
         const kpis: Record<string, string> = {};
         
-        const totalText = await this.page.locator('text=Total de Órdenes').locator('..').locator('..').textContent();
-        if (totalText) {
-            console.log(`[MOJITO-DEBUG] KPI Raw: ${totalText.trim()}`);
-            kpis['totalOrdenes'] = totalText.trim();
+        try {
+            // El label es "Total de Órdenes". El valor está en un elemento hermano o padre cercano.
+            const totalOrdenesLabel = this.page.locator('text=Total de Órdenes').first();
+            await totalOrdenesLabel.waitFor({ state: 'visible', timeout: 15000 });
+            
+            // Subir al contenedor que tiene el número
+            const totalText = await totalOrdenesLabel.locator('xpath=../..').textContent();
+            
+            if (totalText) {
+                console.log(`[MOJITO-DEBUG] KPI Raw: ${totalText.trim()}`);
+                // Ejemplo: "329 / 329 Total de Órdenes" -> Quedarnos con "329"
+                const match = totalText.match(/(\d+)\s*\/\s*(\d+)/);
+                if (match) {
+                    kpis['totalOrdenes'] = match[1]; // El primer número (ej: 329)
+                    console.log(`[MOJITO-DEBUG] ✅ Valor extraído: ${kpis['totalOrdenes']}`);
+                } else {
+                    // Fallback: tratar de buscar cualquier número si no hay formato "/"
+                    const numMatch = totalText.match(/(\d+)/);
+                    if (numMatch) kpis['totalOrdenes'] = numMatch[1];
+                }
+            }
+        } catch (e: any) {
+            console.error(`[MOJITO-DEBUG] ❌ Error extrayendo KPIs: ${e.message}`);
         }
         
         return kpis;
@@ -154,5 +171,24 @@ export class ReportingPage {
         const cell = this.page.locator('table tbody tr:nth-child(2) td').first();
         await cell.waitFor({ state: 'visible', timeout: 15000 });
         return await cell.innerText();
+    }
+
+    async selectDateRange(range: string) {
+        console.log(`[MOJITO-DEBUG] Seleccionando rango de fecha: ${range}`);
+        // Abrir el selector de fecha (clase típica de Ant Design o id descriptivo)
+        const datePicker = this.page.locator('.ant-picker-range, [placeholder*="Fecha"]').first();
+        await datePicker.click();
+        
+        // Buscar la opción en el dropdown
+        const option = this.page.locator(`.ant-picker-presets li:has-text("${range}"), .ant-tag:has-text("${range}")`).first();
+        if (await option.isVisible()) {
+            await option.click();
+        } else {
+            console.warn(`[MOJITO-DEBUG] ⚠️ No se encontró la opción predefinida "${range}".`);
+        }
+        
+        // Esperar a que la tabla se recargue (petición de red)
+        await this.page.waitForLoadState('networkidle');
+        await this.page.waitForTimeout(2000);
     }
 }

@@ -15,6 +15,6 @@ export class LoginToMojito implements Task {
         const loginPage = new LoginPage(actor.page);
         await loginPage.navigate();
         await loginPage.login(this.user, this.pass);
-        await loginPage.selectEntity('Global'); // Selección por defecto para MOJITO BI
+        await loginPage.selectEntity('Empresas CEC'); // Entidad específica para este entorno BI
     }
 }

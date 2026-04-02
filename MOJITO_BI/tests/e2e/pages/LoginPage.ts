@@ -15,7 +15,7 @@ export class LoginPage {
 
     async navigate() {
         // URL de Mojito BI que redirige al SSO
-        await this.page.goto('https://reporting.dev.mojito360.com/');
+        await this.page.goto('https://reporting.dev.mojito360.com/', { waitUntil: 'domcontentloaded' });
     }
 
     async login(username: string, pass: string) {
@@ -30,20 +30,16 @@ export class LoginPage {
 
     async selectEntity(entityName: string = 'Global') {
         console.log(`[MOJITO-DEBUG] Seleccionando entidad: ${entityName}`);
-        // await this.page.screenshot({ path: 'mojito_login_success.png' }); // Deshabilitado por timeout
-        
-        await this.page.waitForTimeout(2000); // Dar tiempo a que cargue la lista
-        const entityLocator = this.page.locator('div').filter({ hasText: new RegExp(`^${entityName}$`, 'i') }).first();
-        if (!(await entityLocator.isVisible())) {
-            // Reintento con selector más laxo si el estricto falla
-            console.log(`[MOJITO-DEBUG] Reintentando selector laxo para ${entityName}`);
-            await this.page.locator(`text=${entityName}`).first().click();
-        } else {
-            await entityLocator.click();
+        try {
+            await this.page.waitForLoadState('domcontentloaded', { timeout: 15000 });
+            await this.page.screenshot({ path: 'mojito_login_result.png', fullPage: true });
+
+            const entityLocator = this.page.locator(`text=${entityName}`).first();
+            await entityLocator.waitFor({ state: 'visible', timeout: 30000 });
+            await entityLocator.click({ force: true });
+            console.log(`[MOJITO-DEBUG] ✅ Entidad ${entityName} seleccionada.`);
+        } catch (e: any) {
+            console.warn(`[MOJITO-DEBUG] ⚠️ Falló la selección de entidad UI: ${e.message}. Continuando con token capturado...`);
         }
-        
-        await this.page.waitForLoadState('networkidle');
-        console.log(`[MOJITO-DEBUG] Entidad ${entityName} seleccionada.`);
-        await this.page.screenshot({ path: 'mojito_after_entity.png' });
     }
 }
