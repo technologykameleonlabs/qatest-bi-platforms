@@ -5,35 +5,48 @@ import { FilterReport } from './screenplay/FilterReportTask';
 import { ValidateDataIntegrity } from './screenplay/ValidateDataIntegrityTask';
 import { ExportReport } from './screenplay/ExportReportTask';
 
-test.describe('MOJITO BI E2E Hybrid Validation', () => {
-    test('Validar integridad de datos (API vs UI) y exportación exitosa', async ({ page }) => {
-        test.setTimeout(120000); // Dar más tiempo para el flujo SSO completo
+// ─────────────────────────────────────────────────────────────────────────────
+// MOJITO BI — Hybrid Validation (E2E + API)
+//
+// Flujo completo que verifica que los datos de la UI coincidan con el backend:
+//   1. Login via SSO con JWT interceptado
+//   2. Navegación al reporte y filtrado por rango de fecha
+//   3. Comparación UI KPIs vs OData API ($count)
+//   4. Exportación a Excel
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('MOJITO BI — Hybrid Validation (E2E + API)', () => {
+
+    test('Integridad de datos: UI vs OData API + Exportación', async ({ page }) => {
+        test.setTimeout(120000); // El flujo SSO puede tardar hasta 2 minutos
+
         const analyst = Actor.named('DataAnalyst', page);
 
-        // 1. Login y Preparación
+        // ── 1. Login ─────────────────────────────────────────────────────────
+        // Usar credenciales específicas de Mojito, con fallback a las de CEC
         await analyst.attemptsTo(
             LoginToMojito.withCredentials(
-                process.env.CEC_USERNAME!,
-                process.env.CEC_PASSWORD!
+                process.env.MOJITO_USERNAME || process.env.CEC_USERNAME!,
+                process.env.MOJITO_PASSWORD || process.env.CEC_PASSWORD!
             )
         );
 
-        // 2. Navegación y Filtro
+        // ── 2. Filtrado ───────────────────────────────────────────────────────
         await analyst.attemptsTo(
             FilterReport.forDateRange('Last 30 Days')
         );
 
-        // 3. Validación de Integridad (Hybrid)
-        // Usamos el endpoint OData de Fulfillments que suele coincidir con "Total de Órdenes" en Mojito BI
+        // ── 3. Validación Híbrida ─────────────────────────────────────────────
+        // Compara el KPI "Total de Órdenes" de la UI con el $count del backend
         await analyst.attemptsTo(
-            ValidateDataIntegrity.againstApi('/odata/Fulfillments/$count') 
+            ValidateDataIntegrity.againstApi('/odata/Fulfillments/$count')
         );
 
-        // 4. Exportación
+        // ── 4. Exportación ────────────────────────────────────────────────────
         await analyst.attemptsTo(
             ExportReport.toFile()
         );
 
-        console.log('🎉 FLUJO HÍBRIDO COMPLETADO: Datos validados y reporte exportado.');
+        console.log('🎉 Flujo híbrido completado: datos validados y reporte exportado.');
     });
+
 });

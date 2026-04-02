@@ -1,39 +1,47 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { Actor } from '../../../common/screenplay/Screenplay';
 import { FilterReport } from './screenplay/FilterReportTask';
 import { LoginToMojito } from './screenplay/LoginTask';
 import { ValidateDataIntegrity } from './screenplay/ValidateDataIntegrityTask';
 import { ExportReport } from './screenplay/ExportReportTask';
 
-test.describe('MOJITO BI - Flujo Completo de Auditoría', () => {
-    test('Validación Híbrida de Datos y Exportación en Mojito', async ({ page }) => {
+// ─────────────────────────────────────────────────────────────────────────────
+// MOJITO BI — Flujo Completo de Auditoría
+//
+// Test de integración end-to-end que cubre el flujo de negocio completo:
+// login → filtrado → validación de integridad UI/API → exportación.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('MOJITO BI — Flujo Completo de Auditoría', () => {
+
+    test('Validación híbrida de datos y exportación', async ({ page }) => {
+        test.setTimeout(120000);
+
         const analyst = Actor.named('MojitoAnalyst', page);
 
-        // 1. Autenticación con Red Interceptor
+        // 1. Autenticación via SSO con JWT interceptado
         await analyst.attemptsTo(
-            LoginToMojito.withCredentials(process.env.CEC_USERNAME!, process.env.CEC_PASSWORD!)
+            LoginToMojito.withCredentials(
+                process.env.MOJITO_USERNAME || process.env.CEC_USERNAME!,
+                process.env.MOJITO_PASSWORD || process.env.CEC_PASSWORD!
+            )
         );
 
-        // 2. Filtrado y Carga de Datos
-        console.log('[AUDIT] Aplicando filtros de tiempo...');
+        // 2. Filtrado por rango de fechas
         await analyst.attemptsTo(
             FilterReport.forDateRange('Last 30 Days')
         );
 
-        // 3. Validación de Integridad (UI vs Backend)
-        // Usamos un endpoint base que sabemos que responde OData folders/providers para esta demo
-        // o uno de reportes si tenemos el key.
-        console.log('[AUDIT] Ejecutando validación de integridad híbrida...');
+        // 3. Validación híbrida: KPI "Total de Órdenes" (UI) vs Fulfillments/$count (API)
         await analyst.attemptsTo(
-            ValidateDataIntegrity.againstApi('/odata/Folders')
+            ValidateDataIntegrity.againstApi('/odata/Fulfillments/$count')
         );
 
-        // 4. Validación de Exportación (Download)
-        console.log('[AUDIT] Validando funcionalidad de exportación...');
+        // 4. Exportar el reporte a Excel
         await analyst.attemptsTo(
             ExportReport.toFile()
         );
 
-        console.log('[AUDIT] ✅ Flujo Mojito BI completado con éxito.');
+        console.log('✅ Flujo Mojito BI completado con éxito.');
     });
+
 });

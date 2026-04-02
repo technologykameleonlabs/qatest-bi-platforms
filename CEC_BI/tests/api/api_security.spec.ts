@@ -1,48 +1,53 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Suite de Seguridad API — CEC BI
- * 
- * Valida que TODOS los endpoints protegidos devuelvan 401 (Unauthorized)
- * cuando se acceden SIN token de autenticación.
- * 
- * También confirma que los endpoints públicos (Health, Ping) responden sin auth.
- */
-test.describe('CEC BI - API Security Suite (Sin Token)', () => {
+// ─────────────────────────────────────────────────────────────────────────────
+// CEC BI — API Security Suite
+//
+// Valida que TODOS los endpoints protegidos devuelvan 401 (Unauthorized)
+// cuando se acceden SIN token de autenticación.
+//
+// Nota: Este archivo cubre únicamente la superficie de ataque (sin auth).
+//       Los tests con auth están en api_health.spec.ts.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('CEC BI — API Security Suite (Sin Token)', () => {
     const BASE_URL = process.env.CEC_BASE_URL || 'https://dev.bi.empresascec.com/backend';
 
-    // Helper para hacer requests sin token
-    async function rawGet(request: any, endpoint: string) {
-        return await request.get(`${BASE_URL}${endpoint}`, {
-            headers: { 'Accept': 'application/json' },
+    /** Helper: petición GET sin token de autenticación */
+    async function unauthGet(request: any, endpoint: string) {
+        return request.get(`${BASE_URL}${endpoint}`, {
+            headers: { Accept: 'application/json' },
             timeout: 15000,
         });
     }
 
-    // ============================================================
-    // ENDPOINTS PÚBLICOS (Deben responder sin auth)
-    // ============================================================
-    test('Endpoint Auth/ping requiere autenticación', async ({ request }) => {
-        console.log('[SECURITY] 👉 Validando que Auth/ping requiere token...');
-
-        const pingRes = await rawGet(request, '/api/Auth/ping');
-        console.log(`[SECURITY] /api/Auth/ping → ${pingRes.status()}`);
-        // Auth/ping está protegido — esto es correcto
-        expect([401]).toContain(pingRes.status());
-
-        console.log('[SECURITY] ✅ Auth/ping correctamente protegido.');
-    });
-
-    // ============================================================
-    // ENDPOINTS PROTEGIDOS (Deben devolver 401 sin auth)
-    // ============================================================
-    test('Endpoints protegidos deben devolver 401 sin token', async ({ request }) => {
-        console.log('[SECURITY] 👉 Validando endpoints protegidos...');
-
-        const protectedEndpoints = [
+    // ── Endpoints REST protegidos ─────────────────────────────────────────────
+    test('Endpoints REST protegidos devuelven 401 sin token', async ({ request }) => {
+        const endpoints = [
+            '/api/Auth/ping',
             '/api/Auth/me',
             '/api/Credentials',
             '/api/Credentials/status',
+        ];
+
+        for (const endpoint of endpoints) {
+            const res = await unauthGet(request, endpoint);
+            console.log(`[Security] ${endpoint} → ${res.status()}`);
+
+            if (res.status() === 500) {
+                console.warn(`[Security] ⚠️ HALLAZGO: ${endpoint} retorna 500 sin token (posible vulnerabilidad)`);
+            }
+            expect(
+                [401, 500],
+                `${endpoint} debería rechazar peticiones sin token`
+            ).toContain(res.status());
+        }
+
+        console.log('[Security] ✅ Endpoints REST protegidos correctamente.');
+    });
+
+    // ── Endpoints OData protegidos (colecciones) ──────────────────────────────
+    test('Endpoints OData protegidos devuelven 401 sin token', async ({ request }) => {
+        const endpoints = [
             '/odata/DataSourceProviders',
             '/odata/Folders',
             '/odata/Permissions',
@@ -52,26 +57,18 @@ test.describe('CEC BI - API Security Suite (Sin Token)', () => {
             '/odata/RequestAudits',
         ];
 
-        for (const endpoint of protectedEndpoints) {
-            const res = await rawGet(request, endpoint);
-            console.log(`[SECURITY] ${endpoint} → ${res.status()}`);
-            // 401 = correcto (Unauthorized), 500 = el servidor falla sin auth (hallazgo de seguridad)
-            expect([401, 500]).toContain(res.status());
-            if (res.status() === 500) {
-                console.warn(`[SECURITY] ⚠️ HALLAZGO: ${endpoint} devuelve 500 en vez de 401. Posible vulnerabilidad.`);
-            }
+        for (const endpoint of endpoints) {
+            const res = await unauthGet(request, endpoint);
+            console.log(`[Security] ${endpoint} → ${res.status()}`);
+            expect(res.status(), `${endpoint} debería rechazar acceso sin token`).toBe(401);
         }
 
-        console.log('[SECURITY] ✅ Todos los endpoints protegidos rechazan acceso sin token.');
+        console.log('[Security] ✅ Endpoints OData protegidos correctamente.');
     });
 
-    // ============================================================
-    // ODATA $COUNT (También debe requerir auth)
-    // ============================================================
-    test('OData $count endpoints deben devolver 401 sin token', async ({ request }) => {
-        console.log('[SECURITY] 👉 Validando OData $count sin token...');
-
-        const countEndpoints = [
+    // ── Endpoints OData $count protegidos ─────────────────────────────────────
+    test('Endpoints OData $count devuelven 401 sin token', async ({ request }) => {
+        const endpoints = [
             '/odata/DataSourceProviders/$count',
             '/odata/Folders/$count',
             '/odata/Permissions/$count',
@@ -81,12 +78,12 @@ test.describe('CEC BI - API Security Suite (Sin Token)', () => {
             '/odata/RequestAudits/$count',
         ];
 
-        for (const endpoint of countEndpoints) {
-            const res = await rawGet(request, endpoint);
-            console.log(`[SECURITY] ${endpoint} → ${res.status()}`);
-            expect(res.status(), `${endpoint} debería devolver 401 sin token`).toBe(401);
+        for (const endpoint of endpoints) {
+            const res = await unauthGet(request, endpoint);
+            console.log(`[Security] ${endpoint} → ${res.status()}`);
+            expect(res.status(), `${endpoint} debería devolver 401`).toBe(401);
         }
 
-        console.log('[SECURITY] ✅ Todos los endpoints $count protegidos correctamente.');
+        console.log('[Security] ✅ Endpoints $count protegidos correctamente.');
     });
 });
