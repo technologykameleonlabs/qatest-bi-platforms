@@ -66,8 +66,9 @@ export class BaseAuth {
         overrides?: { client_id?: string; client_secret?: string }
     ) {
         if (platform === 'CEC') {
+            const baseUrl = (process.env.CEC_BASE_URL || '').replace(/\/backend$/, '');
             return {
-                tokenUrl: `${process.env.CEC_BASE_URL}/connect/token`,
+                tokenUrl: `${baseUrl}/connect/token`,
                 client_id: overrides?.client_id || process.env.CEC_CLIENT_ID || 'cecbi_web',
                 client_secret: overrides?.client_secret || process.env.CEC_CLIENT_SECRET || '',
                 username: process.env.CEC_USERNAME!,
