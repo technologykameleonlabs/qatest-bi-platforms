@@ -19,12 +19,12 @@ export class LoginPage {
     }
 
     async login(username: string, pass: string) {
-        await this.usernameInput.waitFor({ state: 'visible', timeout: 15000 });
-        await this.usernameInput.fill(username);
-        await this.passwordInput.fill(pass);
+        await this.usernameInput.waitFor({ state: 'visible', timeout: 30000 });
+        await this.usernameInput.type(username, { delay: 50 }); // Escribir con delay es más estable
+        await this.passwordInput.type(pass, { delay: 50 });
         await this.loginButton.click();
         
-        // Esperar a que desaparezca el formulario de login (indica éxito preliminar)
-        await this.loginButton.waitFor({ state: 'hidden', timeout: 20000 });
+        // Esperar a que el login procese y la red se calme antes de salir
+        await this.page.waitForLoadState('networkidle', { timeout: 30000 });
     }
 }
