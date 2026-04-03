@@ -1,4 +1,4 @@
-import { test, expect, chromium } from '@playwright/test';
+import { test, expect, chromium, request } from '@playwright/test';
 import { BaseClient } from '../../../common/BaseClient';
 import { Actor } from '../../../common/screenplay/Screenplay';
 import { LoginToCEC } from '../e2e/screenplay/LoginTask';
@@ -40,7 +40,7 @@ test.describe('CEC BI — API Global Discovery & Mass Audit', () => {
         await browser.close();
         
         // Inicializamos un objeto request local para el cliente
-        const requestContext = await chromium.request.newContext();
+        const requestContext = await request.newContext();
         client = new BaseClient(requestContext, token, BASE_URL);
         console.log('[DISCOVERY] ✅ JWT capturado exitosamente.');
     });
