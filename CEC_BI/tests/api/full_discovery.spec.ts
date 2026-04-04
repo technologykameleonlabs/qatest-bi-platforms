@@ -6,10 +6,7 @@ import { SwaggerDiscovery } from '../../../common/SwaggerDiscovery';
 import * as path from 'path';
 
 /**
- * CEC BI — Full API Global Discovery
- *
- * Utiliza el UI Interceptor para capturar el token real y auditar
- * de forma masiva todos los endpoints definidos en bi_swagger.json.
+ * CEC BI — Full API Global Discovery (Resiliente)
  */
 test.describe('CEC BI — API Global Discovery & Mass Audit', () => {
     let client: BaseClient;
@@ -17,10 +14,10 @@ test.describe('CEC BI — API Global Discovery & Mass Audit', () => {
     const BASE_URL = process.env.CEC_BASE_URL || 'https://dev.bi.empresascec.com/backend';
 
     test.beforeAll(async () => {
-        // Aumentamos el timeout para el login visual (SSO puede ser lento)
-        test.setTimeout(120000);
+        // Timeout extendido para entornos lentos
+        test.setTimeout(180000);
 
-        console.log('\n[DISCOVERY] Iniciando Auditoría Masiva (CEC BI) via UI Interceptor...');
+        console.log('\n[DISCOVERY] Iniciando Auditoría Masiva (CEC BI) - Modo Resiliente...');
         
         const browser = await chromium.launch({ headless: true });
         const context = await browser.newContext();
@@ -29,25 +26,29 @@ test.describe('CEC BI — API Global Discovery & Mass Audit', () => {
         const auditor = Actor.named('CEC-Auditor', page);
         await auditor.startTokenInterception();
         
-        await auditor.attemptsTo(
-            LoginToCEC.withCredentials(
-                process.env.CEC_USERNAME!,
-                process.env.CEC_PASSWORD!
-            )
-        );
+        try {
+            await auditor.attemptsTo(
+                LoginToCEC.withCredentials(
+                    process.env.CEC_USERNAME!,
+                    process.env.CEC_PASSWORD!
+                )
+            );
+        } catch (e) {
+            console.warn('[DISCOVERY] ⚠️ Error en login visual, intentando capturar JWT de todas formas...');
+        }
         
-        const token = await auditor.waitForToken(60000);
+        const token = await auditor.waitForToken(120000);
         await browser.close();
         
-        // Inicializamos un objeto request local para el cliente
         const requestContext = await request.newContext();
-        client = new BaseClient(requestContext, token, BASE_URL);
-        console.log('[DISCOVERY] ✅ JWT capturado exitosamente.');
+        // Usamos el ID '1' como base de contexto (confirmado en backend BI)
+        client = new BaseClient(requestContext, token, BASE_URL, '1');
+        console.log('[DISCOVERY] ✅ JWT capturado exitosamente. Iniciando escaneo...');
     });
 
     test('Auditar todos los endpoints GET del Swagger', async () => {
         const endpoints = SwaggerDiscovery.extractGetEndpoints(SWAGGER_PATH);
-        console.log(`[DISCOVERY] Procesando ${endpoints.length} endpoints...`);
+        console.log(`[DISCOVERY] Procesando ${endpoints.length} endpoints en CEC BI...`);
 
         const results = {
             total: endpoints.length,
@@ -81,7 +82,7 @@ test.describe('CEC BI — API Global Discovery & Mass Audit', () => {
             }
         }
 
-        console.log('\n📊 RESUMEN CEC BI:');
+        console.log('\n📊 RESUMEN FINAL CEC BI:');
         console.log(`✅ OK: ${results.success} | ⚠️ 404: ${results.notFound} | ❌ Error: ${results.error} | ⚙️ Omitidos: ${results.withParams}`);
         
         expect(results.success).toBeGreaterThan(0);

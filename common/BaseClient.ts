@@ -3,13 +3,8 @@ import { APIRequestContext } from '@playwright/test';
 /**
  * BaseClient — Cliente HTTP para comunicación con las APIs de las plataformas BI.
  *
- * Inyecta automáticamente los headers de autenticación (Bearer token) y opcionales
- * como `X-Company-Id` en cada petición.
- *
- * @example
- * const client = new BaseClient(request, jwt, 'https://dev.bi.empresascec.com/backend');
- * const res = await client.get('/odata/Reports');
- * const res = await client.getSafe('/api/reports/123/cards'); // No lanza en 4xx/5xx
+ * Inyecta automáticamente los headers de autenticación (Bearer token) y los
+ * headers necesarios para OData y reporteabilidad.
  */
 export class BaseClient {
     constructor(
@@ -20,21 +15,28 @@ export class BaseClient {
     ) {}
 
     /**
-     * GET autenticado. Lanza una advertencia en consola si la respuesta es un error,
-     * pero devuelve la respuesta para que el caller decida cómo manejarla.
+     * GET autenticado. Lanza una advertencia en consola si la respuesta es un error.
      */
     async get(endpoint: string, params?: Record<string, string>) {
-        const response = await this.requestContext.get(`${this.baseUrl}${endpoint}`, {
+        const url = `${this.baseUrl}${endpoint}`;
+        
+        // Autorización para descubrimiento: autoinyectar $top=1 en OData si no hay params
+        const queryParams = params || {};
+        if (endpoint.toLowerCase().includes('/odata/') && !queryParams['$top'] && !endpoint.includes('$count')) {
+            queryParams['$top'] = '1';
+        }
+
+        const response = await this.requestContext.get(url, {
             headers: this.getHeaders(),
-            params,
+            params: queryParams,
         });
-        this.logIfError(response);
+        
+        await this.logIfError(response);
         return response;
     }
 
     /**
      * GET autenticado "seguro" — nunca lanza, siempre devuelve la respuesta.
-     * Ideal para sondeos y discovery de endpoints donde un 404 es un resultado válido.
      */
     async getSafe(endpoint: string, params?: Record<string, string>) {
         try {
@@ -53,7 +55,7 @@ export class BaseClient {
             headers: this.getHeaders(),
             data,
         });
-        this.logIfError(response);
+        await this.logIfError(response);
         return response;
     }
 
@@ -62,18 +64,26 @@ export class BaseClient {
     private getHeaders(): Record<string, string> {
         const headers: Record<string, string> = {
             Authorization: `Bearer ${this.token}`,
-            Accept: 'application/json',
+            Accept: 'application/json, text/plain, */*',
+            'OData-Version': '4.0',
+            'OData-MaxVersion': '4.0',
+            'Prefer': 'odata.include-annotations="*"',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
         };
+        
         if (this.companyId) {
             headers['X-Company-Id'] = this.companyId;
         }
+        
         return headers;
     }
 
-    private logIfError(response: { status: () => number; url: () => string }) {
+    private async logIfError(response: { status: () => number; url: () => string; text: () => Promise<string> }) {
         const status = response.status();
         if (status >= 400) {
-            console.warn(`[BaseClient] ⚠️ ${status} en ${response.url()}`);
+            const body = await response.text().catch(() => 'No body');
+            console.warn(`[BaseClient] ⚠️ ${status} en ${response.url()} | Body: ${body.substring(0, 200)}`);
         }
     }
 }

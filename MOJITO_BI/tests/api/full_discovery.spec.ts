@@ -6,10 +6,7 @@ import { SwaggerDiscovery } from '../../../common/SwaggerDiscovery';
 import * as path from 'path';
 
 /**
- * MOJITO BI — Full API Global Discovery
- *
- * Utiliza el UI Interceptor para capturar el token real y auditar
- * de forma masiva todos los endpoints definidos en reporting_swagger.json.
+ * MOJITO BI — Full API Global Discovery (Resiliente)
  */
 test.describe('MOJITO BI — API Global Discovery & Mass Audit', () => {
     let client: BaseClient;
@@ -17,10 +14,10 @@ test.describe('MOJITO BI — API Global Discovery & Mass Audit', () => {
     const BASE_URL = process.env.MOJITO_BASE_URL || 'https://reporting.dev.mojito360.com/backend';
 
     test.beforeAll(async () => {
-        // Aumentamos el timeout para el login visual (SSO puede ser lento)
-        test.setTimeout(120000);
+        // Timeout extendido para entornos muy lentos
+        test.setTimeout(180000);
 
-        console.log('\n[DISCOVERY] Iniciando Auditoría Masiva (MOJITO BI) via UI Interceptor...');
+        console.log('\n[DISCOVERY] Iniciando Auditoría Masiva (MOJITO BI) - Modo Resiliente...');
         
         const browser = await chromium.launch({ headless: true });
         const context = await browser.newContext();
@@ -29,20 +26,25 @@ test.describe('MOJITO BI — API Global Discovery & Mass Audit', () => {
         const auditor = Actor.named('Mojito-Discovery', page);
         await auditor.startTokenInterception();
         
-        await auditor.attemptsTo(
-            LoginToMojito.withCredentials(
-                process.env.MOJITO_USERNAME || process.env.CEC_USERNAME!,
-                process.env.MOJITO_PASSWORD || process.env.CEC_PASSWORD!
-            )
-        );
+        try {
+            await auditor.attemptsTo(
+                LoginToMojito.withCredentials(
+                    process.env.MOJITO_USERNAME || process.env.CEC_USERNAME!,
+                    process.env.MOJITO_PASSWORD || process.env.CEC_PASSWORD!
+                )
+            );
+        } catch (e) {
+            console.warn('[DISCOVERY] ⚠️ Error durante Login visual, pero intentaremos capturar el token igualmente.');
+        }
         
-        const token = await auditor.waitForToken(60000);
+        // Espera extendida de 2 minutos para el token (SSO puede ser lento)
+        const token = await auditor.waitForToken(120000);
         await browser.close();
         
-        // Inicializamos un objeto request local para el cliente
         const requestContext = await request.newContext();
-        client = new BaseClient(requestContext, token, BASE_URL);
-        console.log('[DISCOVERY] ✅ JWT capturado exitosamente.');
+        // Usamos el ID '1' confirmado por inspección de red
+        client = new BaseClient(requestContext, token, BASE_URL, '1');
+        console.log('[DISCOVERY] ✅ JWT capturado exitosamente. Iniciando escaneo...');
     });
 
     test('Auditar todos los endpoints GET del Swagger', async () => {
@@ -81,7 +83,7 @@ test.describe('MOJITO BI — API Global Discovery & Mass Audit', () => {
             }
         }
 
-        console.log('\n📊 RESUMEN MOJITO BI:');
+        console.log('\n📊 RESUMEN FINAL MOJITO BI:');
         console.log(`✅ OK: ${results.success} | ⚠️ 404: ${results.notFound} | ❌ Error: ${results.error} | ⚙️ Omitidos: ${results.withParams}`);
         
         expect(results.success).toBeGreaterThan(0);
