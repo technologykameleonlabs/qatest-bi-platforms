@@ -65,24 +65,40 @@ export class Actor {
 
     /**
      * Devuelve el token capturado por red, o busca en localStorage/sessionStorage como fallback.
+     * El fallback de storage puede fallar si la página está navegando — se maneja silenciosamente.
      */
     async getToken(): Promise<string | null> {
         if (this._networkToken) return this._networkToken;
-        return await this.extractTokenFromStorage();
+        try {
+            return await this.extractTokenFromStorage();
+        } catch {
+            // El contexto de página puede estar destruido durante una navegación — ignorar
+            return null;
+        }
     }
 
     /**
      * Espera de forma activa hasta que el token esté disponible.
-     * Lanza un error si el timeout se agota sin capturar el token.
+     * Prioriza el token de red (networkToken) para evitar acceder al DOM durante navegaciones.
      *
      * @param timeout - Tiempo máximo de espera en ms (por defecto 30s)
      */
     async waitForToken(timeout: number = 30000): Promise<string> {
         const start = Date.now();
         while (Date.now() - start < timeout) {
+            // Si ya tenemos el token de red, lo retornamos directamente sin tocar el DOM
+            if (this._networkToken) return this._networkToken;
+            
             const token = await this.getToken();
             if (token) return token;
-            await this.page.waitForTimeout(1000);
+            
+            // Solo esperamos en la página si sigue activa
+            try {
+                await this.page.waitForTimeout(1000);
+            } catch {
+                await new Promise(r => setTimeout(r, 1000)); // fallback si la página cerró
+            }
+            
             console.log(
                 `[${this.name}] ⏳ Esperando JWT... (${Math.round((Date.now() - start) / 1000)}s)`
             );
